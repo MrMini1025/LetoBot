@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+      <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Сколько осталось до лета? (точный счетчик дней, часов минут, секунд)" />
+<title>Сколько осталось до лета? (точный счетчик дней, часов минут, секунд)</title>
+<script>
+
+function fr( str, minlen )
+{
+  var s = new String( str );
+
+  if( s.length<minlen && s.search( /\./ ) == -1 ) s += ".";
+  while( s.length<minlen ) s += "0";
+
+  return s;
+}
+
+function fl( str, minlen )
+{
+  var s = new String( str );
+
+  while( s.length<minlen ) s = "0" + s;
+  return s;
+}
+
+function GetDateStr( date )
+{
+  var s;
+  s = fl( date.getDate(), 2 ) + "/";
+  s += fl( date.getMonth()+1, 2 ) + "/";
+  s += date.getFullYear() + " ";
+  s += fl( date.getHours(), 2 ) + ":";
+  s += fl( date.getMinutes(), 2 ) + ":";
+  s += fl( date.getSeconds(), 2 ) + ".";
+  s += fl( date.getMilliseconds(), 3 );
+
+  return s;
+}
+
+function Format( expr, decplaces )
+{
+  var str = "" + Math.round( eval( expr ) * Math.pow( 10,decplaces ) );
+  while( str.length <= decplaces ) str = "0" + str;
+  var decpoint = str.length - decplaces;
+  return str.substring( 0, decpoint ) + "." + str.substring( decpoint, str.length );
+}
+
+function GetVal( now, begin, end )
+{
+  var processed = now.getTime() - begin.getTime();
+  var total = end.getTime() - begin.getTime();
+
+  return 100*processed/total;
+}
+
+function GetStrPerc( val )
+{
+  if( val < 0 )
+  {
+    return "0%";
+  }
+  else if( val > 100 )
+  {
+    return "100%";
+  }
+  else
+  {
+    return Format( val, 14 ) + "%";
+  }
+}
+
+function GetStr( val, label_before, label_after, label_now )
+{
+  if( val < 0 )
+  {
+    return label_before;
+  }
+  else if( val > 100 )
+  {
+    return label_after;
+  }
+  else
+  {
+    return GetStrPerc( val ) + label_now;
+  }
+}
+
+//
+
+var now;
+
+function Period( begin, end, idPrefix, sBefore, sPeriod, sAfter )
+{
+  val = GetVal( now, begin, end );
+  str = GetStr( val, sBefore, sAfter, sPeriod );
+
+  document.getElementById( idPrefix+"l" ).innerHTML = str;
+  document.getElementById( idPrefix+"p" ).style.width = GetStrPerc( val );
+}
+
+function Remain( end, idPrefix )
+{
+  var remain = end.getTime() - now.getTime();
+
+  SetRemain( idPrefix+"sec", remain, 1000 );
+  SetRemain( idPrefix+"min", remain, 1000*60 );
+  SetRemain( idPrefix+"hour", remain, 1000*60*60 );
+  SetRemain( idPrefix+"day", remain, 1000*60*60*24 );
+  SetRemain( idPrefix+"week", remain, 1000*60*60*24*7 );
+}
+
+function SetTime( time, idLabel, sLabel )
+{
+  if( !sLabel ) sLabel = "%s";
+  sLabel = sLabel.replace( /%s/, GetDateStr( time ) );
+  if( document.getElementById( idLabel ).innerHTML != sLabel )
+    document.getElementById( idLabel ).innerHTML = sLabel;
+}
+
+function OnInterval()
+{
+  now = new Date();
+
+  var sNow = "сейчас: "+GetDateStr( now );
+  var year = now.getFullYear();
+  if( now.getMonth() < 7 ) --year;
+
+  var str, strperc, val, begin, end;
+
+  //autumn
+  begin = new Date( year, 8, 1 );
+  end = new Date( year, 11, 1 );
+  Period( begin, end, "td_progress1", "осень еще не началась.", " осени завершено!", "осень уже позади." );
+
+  //winter
+  begin = new Date( year, 11, 1 );
+  end = new Date( year+1, 2, 1 );
+  Period( begin, end, "td_progress2", "зима еще не началась.<br>зимы не будет! ;)", " зимы завершено!", "зима уже позади." );
+
+  //spring
+  begin = new Date( year+1, 2, 1 );
+  end = new Date( year+1, 5, 1 );
+  Period( begin, end, "td_progress3", "весна еще не началась.", " весны завершено!", "весна уже позади. ура! уже лето!" );
+
+  //main
+  begin = new Date( year, 8, 1 )
+  end = new Date( year+1, 5, 1 );
+  Period( begin, end, "td_progress", "лето еще не закончилось!!! :-))) не теряй времени!!!", " нелетнего периода завершено!", "лето уже началось!!! :-))) не теряй времени!!!" );
+
+  //now
+  SetTime( now, "td_now", "сейчас: %s" );
+
+  //begin
+  SetTime( begin, "td_begin" );
+
+  //end
+  SetTime( end, "td_end" );
+
+  //remain
+  Remain( end, "td_rem_" );
+}
+
+function SetRemain( id, remain, one )
+{
+  document.getElementById( id+"_label" ).innerHTML = Format( remain / one,  Math.floor( Math.log( one )*Math.LOG10E ) );
+  document.getElementById( id+"p" ).style.width = GetStrPerc( (remain%one)*100/one );
+}
+
+function DrawProgress( idPrefix )
+{
+  var output = "<div id=\""+idPrefix+"\"><div class=\"progress\" id=\""+idPrefix+"p\"></div></div>";
+  document.write( output );
+}
+
+function DrawLabel( idPrefix )
+{
+  var output = "<div class=\"label\" id=\""+idPrefix+"l\"></div>";
+  document.write( output );
+}
+
+function DrawLabProgress( idPrefix )
+{
+  DrawProgress( idPrefix );
+  DrawLabel( idPrefix );
+}
+
+function Init()
+{
+  OnInterval();
+  setInterval("OnInterval()", 10 );
+}
+
+</script>
+
+<style>
+body, table {font-family: arial;}
+
+.progress{overflow:hidden; height:12px;}
+.label{text-align:center;}
+
+#td_progressp {background-color:#88ff88;}
+#td_progress {background-color:#8888FF;}
+
+#td_progress1p {background-color:#8888FF;}
+#td_progress1 {background-color:#FF8888;}
+
+#td_progress2p {background-color:#FFFF88;}
+#td_progress2 {background-color:#8888FF;}
+
+#td_progress3p {background-color:#88FF88;}
+#td_progress3 {background-color:#FFFF88;}
+
+#td_rem_weekp, #td_rem_dayp, #td_rem_hourp, #td_rem_minp, #td_rem_secp {background-color:#888888;}
+#td_rem_week, #td_rem_day, #td_rem_hour, #td_rem_min, #td_rem_sec {background-color:#eeeeee;}
+
+</style>
+</head>
+<body onload="Init();">
+
+<p class=MsoNormal style='text-align:center'><b><span style='font-size:20.0pt;font-family:Arial;color:red'>Ждем лето!</span></b></p>
+
+
+
+
+  <table style="border-spacing:0;padding:0;border:0;width:100%;height:60%">
+    <tr>
+      <td style="text-align:center">
+        <table>
+          <col><col><col style="width:90%">
+          <tr><td colspan=3>До лета осталось...</td></tr>
+          <tr>
+            <td>недель:</td><td id=td_rem_week_label style="text-align:right">?</td>
+            <td>
+              <script>DrawProgress( "td_rem_week" );</script>
+            </td>
+          </tr>
+          <tr>
+            <td>дней:</td><td id=td_rem_day_label style="text-align:right">?</td>
+            <td>
+              <script>DrawProgress( "td_rem_day" );</script>
+            </td>
+          </tr>
+          <tr>
+            <td>часов:</td><td id=td_rem_hour_label style="text-align:right">?</td>
+            <td>
+              <script>DrawProgress( "td_rem_hour" );</script>
+            </td>
+          </tr>
+          <tr>
+            <td>минут:</td><td id=td_rem_min_label style="text-align:right">?</td>
+            <td>
+              <script>DrawProgress( "td_rem_min" );</script>
+            </td>
+          </tr>
+          <tr>
+            <td>секунд:</td><td id=td_rem_sec_label style="text-align:right">?</td>
+            <td>
+              <script>DrawProgress( "td_rem_sec" );</script>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        <table style="border-spacing:0;padding:0;border:0;width:100%">
+          <tr>
+           <td style="text-align:left" id=td_begin></td>
+            <td style="text-align:center" id=td_now></td>
+            <td style="text-align:right" id=td_end></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <script>DrawLabProgress( "td_progress" );</script>
+      </td>
+    </tr>
+    <tr>
+     <td><br></td>
+    </tr>
+    <tr>
+      <td>
+        <table style="width:100%;border-spacing:5px;padding:5px">
+          <tr style="height:10px;vertical-align:top">
+            <td style="width:33%">
+              <script>DrawLabProgress( "td_progress1" );</script>
+            </td>
+            <td style="width:33%">
+              <script>DrawLabProgress( "td_progress2" );</script>
+            </td>
+            <td style="width:33%">
+              <script>DrawLabProgress( "td_progress3" );</script>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+<br>
+<br>
+
+<!--noindex-->
+<div style="text-align:center;margin:0 auto;padding:2px;width:99%">
+<div style="margin-bottom:5px" id="yartb"></div></div>
+<script>
+(function(w, d, n, s, t) {
+if (window.matchMedia("only screen and (max-device-width: 728px)").matches){var m="R-A-19006-27";}else{var m= "R-A-19006-21";}
+w[n] = w[n] || [];
+w[n].push(function() {
+Ya.Context.AdvManager.render({
+blockId: m,
+statId: 55,
+renderTo: "yartb",
+async: true
+});
+});
+t = d.getElementsByTagName("script")[0];
+s = d.createElement("script");
+s.type = "text/javascript";
+s.src = "//an.yandex.ru/system/context.js";
+s.async = true;
+t.parentNode.insertBefore(s, t);
+})(this, this.document, "yandexContextAsyncCallbacks");
+</script>
+<!--/noindex-->
+
+<div style="text-align: right;position: fixed;z-index:9999999;bottom: 0;width: auto;right: 1%;cursor: pointer;line-height: 0;display:block !important;"><a title="Hosted on free web hosting 000webhost.com. Host your own website for FREE." target="_blank" href="https://www.000webhost.com/?utm_source=000webhostapp&utm_campaign=000_logo&utm_medium=website&utm_content=footer_img"><img src="https://cdn.000webhost.com/000webhost/logo/footer-powered-by-000webhost-white2.png" alt="www.000webhost.com"></a></div><script>function getCookie(e){for(var t=e+"=",n=decodeURIComponent(document.cookie).split(";"),o=0;o<n.length;o++){for(var i=n[o];" "==i.charAt(0);)i=i.substring(1);if(0==i.indexOf(t))return i.substring(t.length,i.length)}return""}getCookie("hostinger")&&(document.cookie="hostinger=;expires=Thu, 01 Jan 1970 00:00:01 GMT;",location.reload());var notification=document.getElementsByClassName("notice notice-success is-dismissible"),hostingerLogo=document.getElementsByClassName("hlogo"),mainContent=document.getElementsByClassName("notice_content")[0],newList=["Powerful and Easy-To-Use Control Panel.","1-Click Auto Installer and 24/7 Live Support.","Free Domain, Email and SSL Bundle.","5x faster WordPress performance","Weekly Backups and Fast Response Time."];if(0<notification.length&&null!=mainContent){var googleFont=document.createElement("link");googleFontHref=document.createAttribute("href"),googleFontRel=document.createAttribute("rel"),googleFontHref.value="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600",googleFontRel.value="stylesheet",googleFont.setAttributeNode(googleFontHref),googleFont.setAttributeNode(googleFontRel);var css="@media only screen and (max-width: 768px) {.web-hosting-90-off-image-wrapper {position: absolute;} .notice_content {justify-content: center;} .web-hosting-90-off-image {opacity: 0.3;}} @media only screen and (min-width: 769px) {.notice_content {justify-content: space-between;} .web-hosting-90-off-image-wrapper {padding: 0 5%}} .content-wrapper {z-index: 5} .notice_content {display: flex; align-items: center;} * {-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;} .upgrade_button_red_sale{border: 0; border-radius: 3px; background-color: #ff123a !important; padding: 15px 55px !important; margin-left: 30px; font-family: 'Open Sans', sans-serif; font-size: 16px; font-weight: 600; color: #ffffff;} .upgrade_button_red_sale:hover{color: #ffffff !important; background: #d10303 !important;}",style=document.createElement("style"),sheet=window.document.styleSheets[0];style.styleSheet?style.styleSheet.cssText=css:style.appendChild(document.createTextNode(css)),document.getElementsByTagName("head")[0].appendChild(style),document.getElementsByTagName("head")[0].appendChild(googleFont);var button=document.getElementsByClassName("upgrade_button_red")[0],link=button.parentElement;link.setAttribute("href","https://www.hostinger.com/hosting-starter-offer?utm_source=000webhost&utm_medium=panel&utm_campaign=000-wp"),link.innerHTML='<button class="upgrade_button_red_sale">TRANSFER NOW</button>',(notification=notification[0]).setAttribute("style","padding-bottom: 10px; padding-top: 5px; background-image: url(https://cdn.000webhost.com/000webhost/promotions/springsale/mountains-neon-background.jpg); background-color: #000000; background-size: cover; background-repeat: no-repeat; color: #ffffff; border-color: #ff123a; border-width: 8px;"),notification.className="notice notice-error is-dismissible",(hostingerLogo=hostingerLogo[0]).setAttribute("src","https://cdn.000webhost.com/000webhost/promotions/springsale/logo-hostinger-white.svg"),hostingerLogo.setAttribute("style","float: none !important; height: auto; max-width: 100%; margin: 40px 20px 10px 30px;");var h1Tag=notification.getElementsByTagName("H1")[0];h1Tag.remove();var paragraph=notification.getElementsByTagName("p")[0];paragraph.innerHTML="Migrate your WordPress to Hostinger and enjoy the best features on the market! The time is now!",paragraph.setAttribute("style",'max-width: 600px; margin-left: 30px; font-family: "Open Sans", sans-serif; font-size: 16px; font-weight: 600;');var list=notification.getElementsByTagName("UL")[0];list.setAttribute("style","max-width: 675px;");for(var listElements=list.getElementsByTagName("LI"),i=0;i<newList.length;i++)listElements[i].setAttribute("style","color:#ffffff; list-style-type: disc; margin-left: 30px; font-family: 'Open Sans', sans-serif; font-size: 14px; font-weight: 300; line-height: 1.5;"),listElements[i].innerHTML=newList[i];listElements[listElements.length-1].remove();var org_html=mainContent.innerHTML,new_html='<div class="content-wrapper">'+mainContent.innerHTML+'</div><div class="web-hosting-90-off-image-wrapper"><img class="web-hosting-90-off-image" src="https://cdn.000webhost.com/000webhost/promotions/springsale/web-hosting-90-off.png"></div>';mainContent.innerHTML=new_html;var saleImage=mainContent.getElementsByClassName("web-hosting-90-off-image")[0];!function(){var t=document.querySelectorAll("body.wp-admin")[0];function e(){var e=document.createElement("iframe");e.id="hgr-promo-widget",e.setAttribute("src","https://www.hostinger.com/widgets/bottom-banner-sale/000_wp_admin"),e.setAttribute("allowfullscreen",!0),e.setAttribute("frameborder",0),e.style.cssText="z-index: 2147483000 !important;position: fixed !important;bottom: 0; width: 100%;!important; left: 0!important;",e.style.opacity=0,e.onload=function(){iFrameResize({},"#hgr-promo-widget"),e.style.opacity=1},t.insertAdjacentElement("afterend",e)}if(window.iFrameResize)e();else{var n=document.createElement("script");n.type="text/javascript",t.insertAdjacentElement("afterend",n),n.onload=e,n.src="https://unpkg.com/iframe-resizer@3.6.3/js/iframeResizer.min.js"}}()}</script></body>
+</html>
